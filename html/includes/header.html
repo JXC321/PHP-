@@ -1,0 +1,40 @@
+<?php
+//打开缓冲、会话，并设置默认标题
+session_start();
+if(!isset($page_title)){
+$page_title = "Wlecome to South China Normal University Online Judge";
+}
+?>
+
+<html>
+    <head>
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <meta http-equiv="Content-Language" content="en-US">
+        <title><?php echo $page_title; ?></title>
+        <link rel="stylesheet" type="text/css" href="./styles/head.css" media="all">
+    </head>
+    <body>
+        <div class="head">
+            <img src="./images/logo.jpg" width="80px" height="100px">
+            <p>华南师范大学数学科学学院</p>
+        </div>
+        <ul class="bar" style="clear:both;">
+            <li><p class="navi">社交功能</p> <a href="#">讨论社区</a> <a href="#">我的好友</a> <a href="#">私信</a></li>
+            <li><p class="navi">在线判题</p> <a href="index.php">练习问题</a> <a href="#">答题排行</a> <a href="#">提交状态</a></li> 
+            <li><p class="navi">教学资源</p> <a href="#">C++教程</a> <a href="#">Java教程</a> <a href="#">Python教程</a></li>
+            <li><p class="navi">竞赛与作业</p> <a href="#">竞赛1</a> <a href="#">竞赛2</a> <a href="#">更多竞赛</a></li>
+            <li>
+            <?php
+            if(!isset($_SESSION['username']))  //判断用户是否登录。未登录的则显示登录页面，登录的则显示管理页面
+            echo '
+            <form action="login.php" method="post">
+                <div>用户： <input type="text" name="username" size="20" maxlength="60" value=""/></div> <br/>
+                <div>密码： <input type="password" name="password" szie="20" maxlength="30" value=""/> </div><br/>
+                <div><input type="submit" name="login" value="登陆"/>&nbsp;&nbsp;&nbsp;<a style="display:inline;" href="register.php"><input type="button" name="logup"value="注册"/></a></div>
+            </form>';
+            else echo '<li><p class="navi">用户操作</p> <a href="change_pass.php">修改密码</a> <a href="#">修改信息</a> <a href="logout.php">退出登录</a></li>';
+            ?>
+            </li>
+        </ul>
+        <div class="content">

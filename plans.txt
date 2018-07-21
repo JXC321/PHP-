@@ -1,0 +1,108 @@
+一、所需编程语言基础：HTML、CSS、JavaScript、Python2、PHP。其中，前三中用于前端页面的实现，python用于编写判题脚本，PHP用于实现后端和拼接网页。
+
+二、实验环境搭建：使用Linux+Apache+MySQL+PHP的开发环境，其中Linux使用CentOS 7。
+
+1.Linux操作系统信息：
+LSB Version:	:core-4.1-amd64:core-4.1-noarch
+Distributor ID:	CentOS
+Description:	CentOS Linux release 7.4.1708 (Core) 
+Release:	7.4.1708
+Codename:	Core
+
+2.安装Apache服务器：
+版本信息：Server version: Apache/2.4.6 (CentOS)
+
+对于Apache服务器的相关操作：
+systemctl start httpd //启动apache
+systemctl stop httpd //停止apache
+systemctl restart httpd //重启apache
+systemctl enable httpd //设置apache开机启动
+
+安装完成后在本地浏览器打开http://127.0.0.1，安装成功的花就能看到Apache的测试页面。
+
+然后了解服务器的配置文件文件，大致要知道这些配置文件的作用以及存放在的位置
+作用		存放路径
+服务目录	/etc/httpd
+主配置文件	/etc/httpd/conf/httpd.conf
+网站数据目录	/var/www/html
+访问日志	/var/log/httpd/access_log
+错误日志	/var/log/httpd/error_log
+
+主要来看看httpd服务程序的主配置文件(/etc/httpd/conf/httpd.conf),主配置文件最为常见的参数包括：
+参数名		作用
+ServerRoot	服务目录
+ServerAdmin	管理员邮箱
+User		运行服务的用户
+Group		运行服务的用户组
+ServerName	网站服务器的域名
+DocumentRoot	网站数据目录
+Lister	监听的ip地址与端口号
+DirectoryLidex	默认的索引页页面
+ErrorLog	错误日志文件
+CustomLog	访问日志文件
+Timeout	网页超时时间，默认为300秒
+Include	需要加载的其他文件
+
+
+3.安装PHP：
+版本信息：PHP 5.4.16
+
+安装完PHP后重启Apache服务器：systemctl restart httpd.service
+
+4.安装mysql
+MySQL版本信息：mysql  Ver 14.14 Distrib 5.7.21
+
+首先，下载并安装MySLQ官方的yum respository：
+wget -i -c http://dev.mysql.com/get/mysql57-community-release-el7-10.noarch.rpm
+sudo yum -y install mysql57-community-release-el7-10.noarch.rpm
+
+安装mysql服务器:
+sudo yum -y install mysql-community-server
+
+然后配置mysql数据库：
+(1)首先运行mysql：
+sudo systemctl start mysqld
+
+查看mysq的运行状态：
+sudo systemctl status mysqld
+
+此时，mysql已经正常运行了，不过想要进入mysql得先找出root用户的初始密码，此密码是安装时自动随即设置的，可以通过如下命令在日志文件中找出密码，然后通过该密码进入mysql。
+grep "password" /var/log/mysqld.log
+
+(2)使用初始密码进入数据库：
+mysql -u root-p
+
+必须修改初始密码后才能操作数据库，使用如下命令修改数据库密码：
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'New_Password';
+
+这里有一个问题，如果你的新密码过于简单，修改会失败。mysql从5.6版本后引入了validate_password插件用于检测密码强度，密码如果不符合预定义的策略会返回错误。
+
+mysql完整的初始密码规则可以通过如下命令查看(前提是：你已经修改了密码，这很尴尬)：
+mysql> SHOW VARIABLES LIKE 'validate_password%';
++--------------------------------------+-------+
+| Variable_name                        | Value |
++--------------------------------------+-------+
+| validate_password_check_user_name    | OFF   |
+| validate_password_dictionary_file    |       |
+| validate_password_length             | 4     |
+| validate_password_mixed_case_count   | 1     |
+| validate_password_number_count       | 1     |
+| validate_password_policy             | LOW   |
+| validate_password_special_char_count | 1     |
++--------------------------------------+-------+
+7 rows in set (0.00 sec)
+
+不过，我们可以通过如下命令修改规则，修改后密码可以设置的很简单：
+mysql> set global validate_password_policy=0;
+mysql> set global validate_password_length=1;
+
+到此，数据库的设置就完成了。
+最后，删除前面安装的yum respository：
+sudo yum -y remove mysql57-community-release-el7-10.noarch
+
+4.关闭SELINUX
+修改其配置文件：/etc/selinux/config 修改为SELINUX=display
+
+三、PHP与数据库的操作
+只要连接上数据库，就可以像在直接操作数据库那样利用PHP造作操作数据库。连接函数使用mysqli_connect()，函数接受四个参数：
+用户名、密码、主机名和数据库名。

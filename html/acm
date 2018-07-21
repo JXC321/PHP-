@@ -1,0 +1,123 @@
+#-*-coding:utf-8-*-
+#!/usr/bin/python
+#判题脚本，此文件接收两个参数：用户提交的代码文件和问题的ID
+import sys, signal, os, subprocess, syslog
+
+PROBLEMDIR = 'problems'
+
+# 判断类型：正确、编译错误、答案错误、超时和文件类型错误
+verdict = {'CORRECT' : 0, 'COMPILE_ERROR' : 1, 'WRONG' : 2, 'TIME_EXCEEDED' : 3, 'MEMORY_EXCEEDED' : 4}
+
+# Execution time limit
+TIME_LIMIT = 2
+
+p = None
+
+# 调试信息
+def debug(msg):
+	syslog.syslog(msg)
+
+# 超时判定
+def alarm_callback(signum, frame):
+	p.terminate()
+	debug("Time out")
+	sys.exit(verdict['TIME_EXCEEDED'])
+
+# 比较用户代码输出和答案的区别
+def compare_files(a, b):
+	fileA = open(a, "r")
+	fileB = open(b, "r")
+
+	linesA = fileA.readlines()
+	linesB = fileB.readlines()
+
+	fileA.close()
+	fileB.close()
+
+	if(len(linesA) != len(linesB)):
+		return False
+
+	for i in range(0, len(linesA)):
+		lineA = linesA[i].strip()
+		lineB = linesB[i].strip()
+		if(lineA != lineB):
+			return False
+
+	return True
+
+#获取用户提交答案的文件和问题的id
+sourcefile = sys.argv[1]
+problem = sys.argv[2]
+#获取答案文件的路径
+path = "/".join(sourcefile.split("/")[:-1])
+#获取答案文件的扩展名，以判断使用什么编译器
+ext = sourcefile.split(".")[1]
+
+# 提交的答案文件类型错误
+if ext not in ["c", "cpp", "java", "py", "php"]:
+	debug("Illegal file")
+	print('Illegal file')
+	sys.exit(verdict['ILLEGAL_FILE'])
+
+#构造shell编译命令
+if(ext == "cpp"):
+	compile = "g++  %s -lm -o %s 2> /dev/null" % (sourcefile, path + "/a.out")
+elif(ext == "c"):
+	compile = "gcc  %s -lm -o %s 2> /dev/null" % (sourcefile, path + "/a.out")	#Math library error fixed
+elif(ext == "java"):
+	compile = "javac %s 2> /dev/null" % (sourcefile)
+elif(ext == "php"):
+	compile = "php -l %s" % (sourcefile)
+
+if(ext in ["c", "cpp", "java",  "php"]):
+	debug(compile)
+	print(compile)
+
+	# 执行编译命令执行成功返回0，否则返回一个非零数字
+	r = os.system(compile)
+	if(r):
+		debug("Compile Error")
+		print("Compile Error")
+		sys.exit(verdict['COMPILE_ERROR'])
+
+file = sourcefile.split("/")[-1]
+infile = PROBLEMDIR + "/" + problem + "/in"
+outfile = path + "/op"
+f = open(outfile,'w')
+f.close()
+
+if(ext in ["c", "cpp"]):
+	run = "./a.out"
+elif(ext == "py"):
+	run = ["python", file]
+elif(ext == "java"):
+	file = file.split(".")[0]
+	run = ["java", file]
+elif(ext == "php"):
+	run = ["php", "-f", file]
+elif(ext == "py"):
+	run = ["python2", file]
+
+# Run
+debug("Running...")
+signal.signal(signal.SIGALRM, alarm_callback)
+signal.alarm(TIME_LIMIT)
+p = subprocess.Popen(run, stdin=open(infile,"r"), stdout=open(outfile,"w"), stderr=open("/dev/null", "w"), cwd=path)
+r = os.waitpid(p.pid, 0)[1]
+signal.alarm(0)
+debug("Exit status : %d" % r)
+print("Exit status : %d" % r)
+
+# 比较代码输出和期望输出
+outputProduced = path + "/op"
+outputExpected = "./" + PROBLEMDIR + "/" + problem + "/out"
+
+#判断答案是否正确
+if( compare_files(outputProduced, outputExpected) == True ):
+	debug("Correct")
+	print("Correct")
+	sys.exit(verdict['CORRECT'])
+else:
+	debug("Wrong")
+	print("Wrong")
+	sys.exit(verdict['WRONG'])
